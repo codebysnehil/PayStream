@@ -1,14 +1,12 @@
 # PayStream
 
-A payments backend I built to learn how banks move money without losing or duplicating it. A payment comes in through a REST API, goes through Kafka to a fraud service, gets settled in a double-entry ledger, and every step is written to an audit log. There's an Angular console on top so you can watch it happen.
+A payments backend I built on how banks move money without losing or duplicating it. A payment comes in through a REST API, goes through Kafka to a fraud service, gets settled in a double-entry ledger, and every step is written to an audit log. There's console on top to watch it happen.
 
 Java 21 · Spring Boot 3 · Kafka · SQL Server · MongoDB · Angular 21 · Docker · Kubernetes
 
-<!-- DEMO VIDEO: on github.com, edit this file and drag docs/paystream-demo-dark.mp4 onto the next line. GitHub replaces it with an inline player. -->
+## Demo 
 
-https://github.com/user-attachments/assets/REPLACE_WITH_UPLOADED_VIDEO
-
-(If the player doesn't load, the recording is also in [`docs/`](docs).)
+https://github.com/user-attachments/assets/adee940b-b594-4943-8394-28eae2a1f144
 
 ## What it does
 
