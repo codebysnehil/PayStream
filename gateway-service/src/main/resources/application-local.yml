@@ -1,0 +1,4 @@
+paystream:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}

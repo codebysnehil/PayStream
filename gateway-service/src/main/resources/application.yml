@@ -1,0 +1,59 @@
+server:
+  port: 8080
+  shutdown: graceful
+  # Trust X-Forwarded-For from the nginx edge so rate limiting sees the real client IP.
+  forward-headers-strategy: native
+
+spring:
+  application:
+    name: gateway-service
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    async:
+      request-timeout: -1
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      # Every gateway instance gets its own group so each one sees every event (fan-out to its SSE clients).
+      group-id: gateway-${random.uuid}
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: com.paystream.events
+
+paystream:
+  downstream:
+    payment-url: ${PAYMENT_SERVICE_URL:http://localhost:8081}
+    ledger-url: ${LEDGER_SERVICE_URL:http://localhost:8083}
+    audit-url: ${AUDIT_SERVICE_URL:http://localhost:8084}
+  security:
+    jwt:
+      # Shared with payment-service so the user's token can be relayed downstream.
+      secret: ${JWT_SECRET}
+      issuer: paystream
+      ttl: 2h
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  rate-limit:
+    requests-per-second: 20
+    burst: 60
+    scenario-per-minute: 12
+  live:
+    max-subscribers: 500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

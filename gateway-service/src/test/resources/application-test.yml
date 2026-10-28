@@ -1,0 +1,8 @@
+paystream:
+  security:
+    jwt:
+      secret: test-secret-test-secret-test-secret-0123456789
+  rate-limit:
+    requests-per-second: 1
+    burst: 5
+    scenario-per-minute: 2
