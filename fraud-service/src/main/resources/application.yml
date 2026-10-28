@@ -1,0 +1,66 @@
+server:
+  port: 8082
+  shutdown: graceful
+
+spring:
+  application:
+    name: fraud-service
+  threads:
+    virtual:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        linger.ms: 5
+        compression.type: lz4
+    consumer:
+      group-id: fraud-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: com.paystream.events
+    listener:
+      # Offsets are committed once per poll batch, after every record in it was processed:
+      # still at-least-once, without a broker round trip per record.
+      # One consumer thread per partition.
+      concurrency: 6
+
+paystream:
+  kafka:
+    partitions: 6
+    replicas: 1
+  fraud:
+    reject-threshold: 70
+    high-value-threshold: 10000
+    hard-limit: 50000
+    structuring-band: 0.90
+    velocity-max-payments: 5
+    velocity-window: 60s
+    high-risk-countries: [KP, IR, SY, CU]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        paystream.fraud.screening: true
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{paymentId:-}]"
