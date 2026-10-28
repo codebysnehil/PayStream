@@ -1,0 +1,21 @@
+# Single public entry point: the console (which proxies /api to the gateway). On OpenShift a Route
+# with edge TLS termination is the equivalent.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paystream
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  tls:
+    - hosts: [paystream.example.com]
+      secretName: paystream-tls
+  rules:
+    - host: paystream.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: console, port: { number: 8080 } }

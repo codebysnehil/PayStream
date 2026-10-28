@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: paystream
+resources:
+  - namespace.yaml
+  - config.yaml
+  - payment-service.yaml
+  - fraud-service.yaml
+  - ledger-service.yaml
+  - audit-service.yaml
+  - gateway-service.yaml
+  - console.yaml
+  - ingress.yaml
+  - hpa.yaml
+# CI overrides the tag per pipeline: kustomize edit set image ...=...:$CI_COMMIT_SHORT_SHA
+images:
+  - { name: registry.example.com/paystream/payment-service, newTag: latest }
+  - { name: registry.example.com/paystream/fraud-service, newTag: latest }
+  - { name: registry.example.com/paystream/ledger-service, newTag: latest }
+  - { name: registry.example.com/paystream/audit-service, newTag: latest }
+  - { name: registry.example.com/paystream/gateway-service, newTag: latest }
+  - { name: registry.example.com/paystream/console, newTag: latest }

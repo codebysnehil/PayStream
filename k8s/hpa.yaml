@@ -1,0 +1,25 @@
+# Fraud screening is CPU-bound and stateless per partition: scale it on CPU. Replicas beyond the
+# topic's partition count (6) would sit idle, so maxReplicas matches it.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fraud-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: fraud-service }
+  minReplicas: 3
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: payment-service }
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }

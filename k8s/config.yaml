@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paystream-config
+data:
+  # e.g. a Strimzi / AMQ Streams cluster on OpenShift, or Confluent / MSK in the cloud
+  kafka-bootstrap-servers: paystream-kafka-bootstrap.kafka.svc:9092
+---
+# Placeholder only. In a real environment secrets come from Vault / External Secrets Operator,
+# never from a committed manifest.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: paystream-secrets
+type: Opaque
+stringData:
+  db-username: CHANGE_ME
+  db-password: CHANGE_ME
+  payment-db-url: jdbc:sqlserver://sqlserver.example.internal:1433;databaseName=payments;encrypt=true
+  ledger-db-url: jdbc:sqlserver://sqlserver.example.internal:1433;databaseName=ledger;encrypt=true
+  mongodb-uri: mongodb://mongodb.example.internal:27017/paystream_audit
+  jwt-secret: CHANGE_ME_TO_A_32_BYTE_OR_LONGER_SECRET
