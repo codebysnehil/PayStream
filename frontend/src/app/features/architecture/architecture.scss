@@ -1,0 +1,24 @@
+.diagram-card { padding: 12px; }
+.diagram { width: 100%; height: auto; display: block; }
+.diagram .node rect { fill: var(--ps-card); stroke: var(--ps-border); stroke-width: 1.5; }
+.diagram .node.accent rect { stroke: var(--ps-accent); stroke-width: 2; }
+.diagram .node.kafka rect { fill: color-mix(in srgb, var(--ps-accent) 10%, var(--ps-card)); stroke: var(--ps-accent); }
+.diagram .node.store rect { stroke-dasharray: 4 3; }
+.diagram text { fill: var(--ps-text); font-size: 15px; font-weight: 600; text-anchor: middle; }
+.diagram text.small { font-size: 11px; font-weight: 400; fill: var(--ps-muted); }
+.diagram text.mono { font-family: var(--ps-mono); }
+.diagram .muted-text { fill: var(--ps-muted); font-size: 12px; font-weight: 400; }
+.diagram .edge { fill: none; stroke: var(--ps-muted); stroke-width: 1.5; }
+.diagram .edge.dashed { stroke-dasharray: 5 4; stroke: var(--ps-accent); }
+.diagram .arrowhead { fill: var(--ps-muted); }
+
+.section { margin: 28px 0 12px; font-size: 1.15rem; }
+.steps { line-height: 1.7; padding-left: 20px; max-width: 980px; }
+.steps li { margin-bottom: 6px; }
+code { font-family: var(--ps-mono); font-size: 0.85em; background: var(--ps-card); border: 1px solid var(--ps-border); padding: 1px 5px; border-radius: 5px; }
+
+.decisions { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.decisions h3 { margin: 0; font-size: 1rem; }
+.decisions mat-icon { color: var(--ps-accent); }
+.decisions p { font-size: 0.875rem; line-height: 1.55; margin: 10px 0 0; }
+.label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ps-muted); }

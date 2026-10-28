@@ -1,0 +1,33 @@
+.gap-top { margin-top: 16px; }
+
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--ps-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-brand) 20%, transparent);
+}
+
+.peak { font-size: 13px; display: flex; gap: 4px; align-items: baseline; }
+.peak strong { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+.reason { margin-bottom: 14px; font-size: 13px; }
+.src {
+  font-size: 11px; font-weight: 500; padding: 0 6px; border-radius: 4px; line-height: 18px;
+  color: var(--ps-bad); background: var(--ps-bad-bg);
+}
+.src.ledger { color: var(--ps-warn); background: var(--ps-warn-bg); }
+.bar { height: 4px; border-radius: 2px; background: var(--ps-sunken); margin-top: 7px; overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--ps-bad); border-radius: 2px; transition: width 0.5s ease; }
+.bar span.ledger { background: var(--ps-warn); }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  padding: 36px 12px; color: var(--ps-muted); font-size: 13px;
+}
+.empty-state mat-icon { font-size: 28px; width: 28px; height: 28px; color: var(--ps-faint); }
+
+.feed .table-wrap { max-height: 620px; overflow-y: auto; }
+.feed .route { max-width: 210px; line-height: 1.35; }
+.feed .route span { display: block; overflow: hidden; text-overflow: ellipsis; }
+.feed .route span.muted { font-size: 12px; }
+.risk { font-variant-numeric: tabular-nums; color: var(--ps-muted); }
+.risk.mid { color: var(--ps-warn); font-weight: 500; }
+.risk.high { color: var(--ps-bad); font-weight: 600; }
