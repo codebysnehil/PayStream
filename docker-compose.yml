@@ -1,0 +1,173 @@
+name: paystream
+
+# Memory is budgeted explicitly: without limits every JVM sizes its heap from the whole VM and the
+# stack ends up in swap. Each service JVM gets 70% of a 512 MB container.
+x-java-service: &java-service
+  mem_limit: 512m
+  restart: unless-stopped
+
+x-service-env: &service-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  SPRING_PROFILES_ACTIVE: local
+  JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError
+  DB_USERNAME: sa
+  DB_PASSWORD: ${MSSQL_SA_PASSWORD:-PayStream_Dev_2026!}
+
+services:
+  kafka:
+    image: apache/kafka:3.8.0
+    ports: ["29092:29092"]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+    mem_limit: 900m
+    healthcheck:
+      # The CLI starts a JVM, so probe quickly at boot and rarely afterwards.
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 60s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+      start_interval: 3s
+
+  # Optional: docker compose --profile tools up -d kafka-ui
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    profiles: [tools]
+    mem_limit: 384m
+    ports: ["8090:8080"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: paystream
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka: { condition: service_healthy }
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports: ["1433:1433"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-PayStream_Dev_2026!}
+      MSSQL_MEMORY_LIMIT_MB: 1536
+    mem_limit: 2200m
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' >/dev/null"]
+      interval: 60s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+      start_interval: 3s
+
+  # SQL Server has no "create database on first connect", so create one database per service.
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-PayStream_Dev_2026!}
+    volumes:
+      - ./infra/mssql/init.sql:/init.sql:ro
+    entrypoint: ["/bin/bash", "-c", "/opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -i /init.sql"]
+    depends_on:
+      sqlserver: { condition: service_healthy }
+
+  mongodb:
+    image: mongo:7.0
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    ports: ["27017:27017"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 60s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 3s
+
+  payment-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: payment-service } }
+    ports: ["8081:8081"]
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:sqlserver://sqlserver:1433;databaseName=payments;encrypt=true;trustServerCertificate=true
+    depends_on:
+      kafka: { condition: service_healthy }
+      sqlserver-init: { condition: service_completed_successfully }
+
+  fraud-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: fraud-service } }
+    ports: ["8082:8082"]
+    environment: *service-env
+    depends_on:
+      kafka: { condition: service_healthy }
+
+  ledger-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: ledger-service } }
+    ports: ["8083:8083"]
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:sqlserver://sqlserver:1433;databaseName=ledger;encrypt=true;trustServerCertificate=true
+    depends_on:
+      kafka: { condition: service_healthy }
+      sqlserver-init: { condition: service_completed_successfully }
+
+  audit-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: audit-service } }
+    ports: ["8084:8084"]
+    environment:
+      <<: *service-env
+      MONGODB_URI: mongodb://mongodb:27017/paystream_audit
+    depends_on:
+      kafka: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
+
+  gateway-service:
+    <<: *java-service
+    build: { context: ., args: { MODULE: gateway-service } }
+    ports: ["8085:8080"]
+    environment:
+      <<: *service-env
+      PAYMENT_SERVICE_URL: http://payment-service:8081
+      LEDGER_SERVICE_URL: http://ledger-service:8083
+      AUDIT_SERVICE_URL: http://audit-service:8084
+    depends_on:
+      kafka: { condition: service_healthy }
+
+  console:
+    build: { context: ./frontend }
+    mem_limit: 64m
+    restart: unless-stopped
+    ports: ["4200:8080"]
+    depends_on: [gateway-service]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    mem_limit: 256m
+    ports: ["9090:9090"]
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    mem_limit: 256m
+    ports: ["3000:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [prometheus]
